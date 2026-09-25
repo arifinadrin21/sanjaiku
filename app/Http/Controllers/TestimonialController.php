@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Models\Testimonial;
 use Illuminate\Http\Request;
-
+use App\Helpers\BadWordFilter;
 class TestimonialController extends Controller
 {
     public function create(Order $order)
@@ -40,6 +40,14 @@ class TestimonialController extends Controller
                 'Anda sudah memberikan testimoni.'
             );
         }
+    if (BadWordFilter::containsBadWord($request->input('comment'))) {
+    return back()
+        ->withInput()
+        ->with(
+            'error',
+            'Ulasan mengandung kata yang tidak pantas. Silakan gunakan bahasa yang sopan.'
+        );
+}
 
         Testimonial::create([
             'user_id' => auth()->id(),

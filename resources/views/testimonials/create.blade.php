@@ -107,6 +107,37 @@
     .testi-wrapper .btn-secondary {
         font-weight: 700;
     }
+
+    /* Notifikasi kata kasar */
+    .bad-word-alert {
+        display: none;
+        background: #fff3cd;
+        color: #664d03;
+        border: 1px solid #ffecb5;
+        border-left: 5px solid #ffc107;
+        border-radius: 10px;
+        padding: 13px 16px;
+        margin-bottom: 20px;
+        font-weight: 600;
+        animation: alertShow 0.25s ease;
+    }
+
+    .bad-word-alert i {
+        color: #d39e00;
+        margin-right: 7px;
+    }
+
+    @keyframes alertShow {
+        from {
+            opacity: 0;
+            transform: translateY(-5px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
 </style>
 
 <div class="container py-5 testi-wrapper">
@@ -126,19 +157,71 @@
 
                 <div class="card-body">
 
+                    {{-- Notifikasi dari Laravel --}}
+                    @if(session('error'))
+                        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            {{ session('error') }}
+
+                            <button type="button"
+                                    class="btn-close"
+                                    data-bs-dismiss="alert"
+                                    aria-label="Tutup"></button>
+                        </div>
+                    @endif
+
+                    {{-- Error validasi --}}
+                    @if($errors->any())
+                        <div class="alert alert-danger" role="alert">
+                            <strong>Periksa kembali:</strong>
+                            <ul class="mb-0 mt-2">
+                                @foreach($errors->all() as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+
                     <div class="order-info">
-                        <h5><i class="fas fa-file-invoice"></i> {{ $order->invoice_number }}</h5>
+                        <h5>
+                            <i class="fas fa-file-invoice"></i>
+                            {{ $order->invoice_number }}
+                        </h5>
+
                         <p>
                             Total :
-                            <strong>Rp {{ number_format($order->total,0,',','.') }}</strong>
+                            <strong>
+                                Rp {{ number_format($order->total,0,',','.') }}
+                            </strong>
                         </p>
                     </div>
 
-                    <form action="{{ route('testimonials.store', $order) }}" method="POST">
+                    <form
+                        id="testimonialForm"
+                        action="{{ route('testimonials.store', $order) }}"
+                        method="POST">
+
                         @csrf
 
+                        {{-- Notifikasi kata kasar --}}
+                        <div
+                            id="badWordAlert"
+                            class="bad-word-alert"
+                            role="alert">
+
+                            <i class="fas fa-exclamation-triangle"></i>
+
+                            <strong>Ulasan tidak dapat dikirim.</strong>
+                            <br>
+
+                            Silakan gunakan bahasa yang sopan dan hindari kata-kata kasar.
+                        </div>
+
                         <div class="mb-3">
-                            <label class="form-label"><i class="fas fa-star-half-alt"></i>Rating</label>
+                            <label class="form-label">
+                                <i class="fas fa-star-half-alt"></i>
+                                Rating
+                            </label>
 
                             <select
                                 name="rating"
@@ -156,14 +239,17 @@
                         </div>
 
                         <div class="mb-4">
-                            <label class="form-label"><i class="fas fa-comment-dots"></i>Komentar</label>
+                            <label class="form-label">
+                                <i class="fas fa-comment-dots"></i>
+                                Komentar
+                            </label>
 
                             <textarea
-    name="comment"
-    rows="5"
-    class="form-control"
-    placeholder="Bagaimana pengalaman Anda?"
-    required></textarea>
+                                name="comment"
+                                rows="5"
+                                class="form-control"
+                                placeholder="Bagaimana pengalaman Anda?"
+                                required>{{ old('comment') }}</textarea>
                         </div>
 
                         <button type="submit" class="btn btn-success">
@@ -174,6 +260,7 @@
                         <a
                             href="{{ route('orders.show', $order->id) }}"
                             class="btn btn-secondary">
+
                             <i class="fas fa-times"></i>
                             Batal
                         </a>
@@ -189,5 +276,94 @@
     </div>
 
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    const form = document.getElementById('testimonialForm');
+    const commentInput = document.querySelector('textarea[name="comment"]');
+    const badWordAlert = document.getElementById('badWordAlert');
+
+    const badWords = [
+        'anjing',
+        'bangsat',
+        'kontol',
+        'memek',
+        'tolol',
+        'goblok',
+        'bego',
+        'idiot',
+        'brengsek',
+        'jancok',
+        'asu',
+        'kampret',
+        'sialan',
+        'tai',
+        'monyet',
+        'pantek',
+        'ngentot',
+        'pepek',
+        'lonte',
+        'pelacur',
+        'bajingan',
+        'basi',
+        'bau',
+        'banci',
+        'sawit',
+        'babi',
+        'bajingan',
+        'bangsat',
+        'poke',
+        'celeng',
+
+    ];
+
+    function containsBadWord(text) {
+        const comment = text.toLowerCase();
+
+        return badWords.some(function (word) {
+            return comment.includes(word);
+        });
+    }
+
+    form.addEventListener('submit', function (event) {
+
+        const comment = commentInput.value.trim();
+
+        if (containsBadWord(comment)) {
+
+            event.preventDefault();
+
+            badWordAlert.style.display = 'block';
+
+            badWordAlert.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center'
+            });
+
+            commentInput.focus();
+
+            return;
+        }
+
+        badWordAlert.style.display = 'none';
+    });
+
+    // Hilangkan notifikasi ketika pelanggan mulai memperbaiki komentar
+    commentInput.addEventListener('input', function () {
+
+        if (!containsBadWord(commentInput.value)) {
+            badWordAlert.style.display = 'none';
+        }
+
+    });
+
+    /*
+     * TEST:
+     * containsBadWord('produk ini goblok') === true
+     * containsBadWord('produknya enak dan bagus') === false
+     */
+});
+</script>
 
 @endsection
